@@ -299,6 +299,34 @@ MAIL_FROM_ADDRESS=nao-responda@ponto-estagio.local
 MAIL_FROM_NAME="Ponto Estagio"
 ```
 
+## Deploy na Vercel
+
+O deploy usa o runtime PHP comunitario `vercel-php` definido em `vercel.json`. Importe o repositorio na Vercel, use o preset **Other**, mantenha o comando de build como `npm run build` e nao defina um diretorio de saida. O runtime instala as dependencias PHP a partir do `composer.lock`; o build do Vite gera os assets em `public/build`.
+
+Configure estas variaveis no projeto Vercel, tanto em Production quanto nos ambientes de preview que forem usar o banco:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://seu-dominio.vercel.app
+APP_KEY=base64:...
+DB_CONNECTION=pgsql
+DB_URL=<URL externa do PostgreSQL no Render>
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=sync
+LOG_CHANNEL=stderr
+VIEW_COMPILED_PATH=/tmp/views
+```
+
+Use a **External Database URL** do Render em `DB_URL`, nao a URL interna. Mantenha a URL completa, incluindo os parametros TLS fornecidos pelo Render, se houver. O banco continua hospedado no Render; a Vercel acessa esse banco pela conexao externa. Nao coloque credenciais no repositorio.
+
+Defina uma `APP_KEY` segura como variavel de ambiente, sem comita-la. A chave atualmente registrada em `render.yaml` esta exposta no repositorio: gere uma nova e atualize o ambiente do Render e o da Vercel com a mesma chave. A troca invalida cookies/sessoes existentes.
+
+Antes de liberar o site, confirme que as migrations ja foram executadas no PostgreSQL do Render. Se o banco estiver vazio, execute `php artisan migrate --force` uma vez em um ambiente conectado a ele; nao rode migrations a cada requisicao da funcao. As tabelas de sessao e cache ja estao nas migrations do projeto.
+
+O filesystem local da Vercel e temporario. O projeto nao apresentou uso de armazenamento local na aplicacao; se adicionar uploads ou arquivos que precisem persistir, use um storage externo compativel com S3. Como a Vercel nao mantem um worker de fila permanente, `QUEUE_CONNECTION=sync` evita jobs parados; configure um worker externo caso passe a usar filas assincronas.
+
 ## 🤝 Contribuição
 
 Para contribuir com o projeto:
